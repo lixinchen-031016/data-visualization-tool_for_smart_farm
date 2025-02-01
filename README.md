@@ -16,12 +16,12 @@
 
 1. 克隆此仓库：
    ```bash
-   git clone https://github.com/yourusername/data-analysis-tool.git
+   git clone https://github.com/lixinchen-031016/data-visualization-tool_for_smart_farm.git
    ```
 
 2. 进入项目目录：
    ```bash
-   cd data-analysis-tool
+   cd data-visualization-tool_for_smart_farm
    ```
 
 3. 安装依赖：
@@ -55,16 +55,11 @@
 4. 将您的更改推送到分支 (`git push origin feature/AmazingFeature`)
 5. 开启一个 Pull Request
 
-## 许可证
-
-本项目采用 MIT 许可证。详情请见 [LICENSE](LICENSE) 文件。
-
 ## 联系方式
 
 如果您有任何问题或建议，请通过以下方式联系我们：
 
-- 项目链接：[https://github.com/yourusername/data-analysis-tool](https://github.com/yourusername/data-analysis-tool)
-- 问题反馈：[https://github.com/yourusername/data-analysis-tool/issues](https://github.com/yourusername/data-analysis-tool/issues)
+- 项目链接：[https://github.com/lixinchen-031016/data-visualization-tool_for_smart_farm](https://github.com/yourusername/data-analysis-tool)
 
 ## 致谢
 
