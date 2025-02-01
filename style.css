@@ -1,0 +1,79 @@
+/* 全局样式 */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+    background-color: #f0f0f4;
+    color: #333;
+}
+
+/* 标题样式 */
+h1, h2, h3 {
+    color: #1D3557;
+    font-weight: 600;
+}
+
+/* 卡片样式 */
+.card {
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 15px;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    padding: 20px;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.45);
+}
+
+/* 按钮样式 */
+.stButton > button {
+    background-color: #007AFF;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.stButton > button:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+}
+
+/* 输入框样式 */
+.stTextInput > div > div > input {
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    padding: 8px 12px;
+}
+
+/* 选择框样式 */
+.stSelectbox > div > div > select {
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    padding: 8px 12px;
+}
+
+/* 侧边栏样式 */
+.css-1d391kg {
+    background-color: rgba(240, 240, 244, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+/* 数据框样式 */
+.stDataFrame {
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+/* 强调色 */
+.highlight {
+    color: #007AFF;
+}
