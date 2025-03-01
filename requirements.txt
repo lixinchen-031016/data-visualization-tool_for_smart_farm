@@ -53,3 +53,4 @@ streamlit_extras
 openpyxl
 statsmodels
 scikit-learn
+openai

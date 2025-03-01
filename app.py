@@ -1,31 +1,26 @@
-import streamlit as st
-from streamlit_option_menu import option_menu
-from streamlit_extras.card import card
-from streamlit_extras.metric_cards import style_metric_cards
+import base64
+import json
+from io import BytesIO
+
+from openai import OpenAI
 import pandas as pd
+import plotly
 import plotly.express as px
 import plotly.graph_objects as go
-import json
-import plotly
 import plotly.io as pio
+import streamlit as st
 from plotly.colors import n_colors
-import io
-import base64
-from io import BytesIO
-from openpyxl import Workbook
-from statsmodels.tsa.seasonal import seasonal_decompose
-from sklearn.cluster import KMeans
-from sklearn.preprocessing import StandardScaler
+from streamlit_extras.metric_cards import style_metric_cards
+from streamlit_option_menu import option_menu
 
 # 设置页面配置
 st.set_page_config(layout="wide", page_title="数据分析工具", page_icon="📊")
 
-# 添加自定义CSS样式
-def local_css(file_name):
-    with open(file_name, "r", encoding="utf-8") as f:
-        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
-local_css("style.css")
+client = OpenAI(
+    api_key="sk-6e4e147032d54b8e8951f712b1e0b305",
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+)
 
 # 读取文件函数
 def read_file(file):
@@ -60,8 +55,8 @@ def main():
     with st.sidebar:
         selected = option_menu(
             menu_title="主菜单",
-            options=["数据概览", "数据清洗", "数据分析", "可视化", "高级分析", "使用说明"],
-            icons=["table", "tools", "bar-chart", "graph-up", "gear-fill", "question-circle"],
+            options=["数据概览", "数据清洗", "数据分析", "可视化", "高级分析", "AI数据分析","使用说明"],
+            icons=["table", "tools", "bar-chart", "graph-up", "gear-fill","tools", "question-circle"],
             menu_icon="cast",
             default_index=0,
         )
@@ -77,6 +72,8 @@ def main():
         data_visualization()
     elif selected == "高级分析":
         advanced_analysis()
+    elif selected == "AI数据分析":
+        ai_data_analysis()
     elif selected == "使用说明":
         show_instructions()
 
@@ -331,6 +328,46 @@ def advanced_analysis():
     fig = px.bar(grouped_data, x=group_column, y=agg_column, title=f"{group_column} 分组的 {agg_column} {agg_function}")
     st.plotly_chart(fig, use_container_width=True)
 
+def ai_data_analysis():
+    st.title("AI数据处理")
+    uploaded_file = st.file_uploader("选择文件", type=["csv", "xlsx", "xls", "json"])
+
+    if uploaded_file is not None:
+        data = read_file(uploaded_file)
+        if data is not None:
+            st.success("文件读取成功")
+            st.session_state['data'] = data
+
+            # 使用 st.text_area 组件用于输入用户消息
+            user_message = st.text_area("请输入上传数据相关的问题或指示：", key="user_message")
+
+            # 调用Qwen2.5 API进行数据分析和预测
+            if st.button("开始分析"):
+                # 将数据转换为JSON格式
+                data_json = data.to_json(orient='records')
+
+                # 构建 messages 参数
+                messages = [
+                    {'role': 'system', 'content': 'You are a helpful assistant.'},
+                    {'role': 'user', 'content': f'{user_message}\n数据如下：\n{data_json}'},
+                ]
+
+                # 调用API
+                completion = client.chat.completions.create(
+                    model="qwen2.5-7b-instruct-1m",
+                    messages=messages,
+                )
+
+                # 解析API响应
+                response = completion.model_dump_json()
+                response_data = json.loads(response)
+
+                analysis = response_data.get('choices', [{}])[0].get('message', {}).get('content', '')
+
+                # 显示分析结果
+                st.subheader("数据分析预测结果")
+                st.write(analysis)
+
 # 使用说明函数
 def show_instructions():
     st.title("使用说明")
@@ -340,6 +377,7 @@ def show_instructions():
     3. **数据分析**：在"数据分析"页面查看描述性统计和相关性分析。
     4. **数据可视化**：使用"可视化"页面创建各种图表。
     5. **高级分析**：在"高级分析"页面进行更深入的数据探索。
+    6. **AI数据分析**：在"AI数据分析页面"调用qwen2.5大语言模型，对上传的文件进行处理，向AI进行提问。
     
     如需更多帮助，请参阅 [GitHub 仓库](https://github.com/lixinchen-031016/data-visualization-tool_for_smart_farm)。
     """)
