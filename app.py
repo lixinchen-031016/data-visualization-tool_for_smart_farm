@@ -319,6 +319,11 @@ def advanced_analysis():
     agg_column = st.selectbox("选择聚合列", data.select_dtypes(include=['float64', 'int64']).columns)
     agg_function = st.selectbox("选择聚合函数", ["平均值", "总和", "最大值", "最小值"])
     
+    # 新增验证逻辑：分组列和聚合列不能相同
+    if group_column == agg_column:
+        st.error("⚠️ 分组列和聚合列不能是同一列，请重新选择")
+        return  # 提前终止执行
+    
     agg_dict = {"平均值": "mean", "总和": "sum", "最大值": "max", "最小值": "min"}
     grouped_data = data.groupby(group_column)[agg_column].agg(agg_dict[agg_function]).reset_index()
     
@@ -331,8 +336,12 @@ def advanced_analysis():
 def ai_data_analysis():
     st.title("AI数据处理")
     
+    # 初始化聊天记录（如果未初始化）
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+    
     # 添加选项以选择数据来源
-    data_source = st.radio("选择数据来源", ["使用数据概览上传的数据", "在此功能上传新数据"])
+    data_source = st.radio("选择数据来源", ["使用数据概览上传的数据", "在此功能上传新数据"], key="ai_data_source")
     
     if data_source == "使用数据概览上传的数据":
         if 'data' not in st.session_state:
@@ -341,7 +350,7 @@ def ai_data_analysis():
         data = st.session_state['data']
         st.success("已加载数据概览页面上传的数据")
     else:
-        uploaded_file = st.file_uploader("选择文件", type=["csv", "xlsx", "xls", "json"])
+        uploaded_file = st.file_uploader("选择文件", type=["csv", "xlsx", "xls", "json"], key="ai_file_uploader")
         if uploaded_file is not None:
             data = read_file(uploaded_file)
             if data is None:
@@ -350,36 +359,75 @@ def ai_data_analysis():
         else:
             st.warning("请上传文件以继续")
             return
-
-    # 使用 st.text_area 组件用于输入用户消息
-    user_message = st.text_area("请输入上传数据相关的问题或指示：", key="user_message")
-
-    # 调用Qwen2.5 API进行数据分析和预测
-    if st.button("开始分析"):
-        # 将数据转换为JSON格式
-        data_json = data.to_json(orient='records')
-
-        # 构建 messages 参数
+    
+    # 显示历史聊天记录
+    for chat in st.session_state.chat_history:
+        with st.chat_message("user"):
+            st.write(chat["user"])
+        with st.chat_message("assistant"):
+            st.write(chat["assistant"])
+    
+    # 用户输入部分
+    user_message = st.chat_input("请输入您的问题或指令...", key="ai_chat_input")
+    
+    if user_message:
+        # 构建包含历史对话的messages
         messages = [
-            {'role': 'system', 'content': 'You are a helpful assistant.'},
-            {'role': 'user', 'content': f'{user_message}\n数据如下：\n{data_json}'},
+            {'role': 'system', 'content': 'You are a helpful assistant.'}
         ]
-
+        
+        # 添加历史对话
+        for chat in st.session_state.chat_history:
+            messages.append({'role': 'user', 'content': chat["user"]})
+            messages.append({'role': 'assistant', 'content': chat["assistant"]})
+        
+        # 添加当前用户消息和数据
+        data_json = data.to_json(orient='records')
+        current_message = f"{user_message}\n数据如下：\n{data_json}"
+        messages.append({'role': 'user', 'content': current_message})
+        
         # 调用API
         completion = client.chat.completions.create(
             model="qwen2.5-7b-instruct-1m",
             messages=messages,
         )
-
-        # 解析API响应
+        
+        # 解析响应
         response = completion.model_dump_json()
         response_data = json.loads(response)
-
         analysis = response_data.get('choices', [{}])[0].get('message', {}).get('content', '')
-
-        # 显示分析结果
-        st.subheader("数据分析预测结果")
-        st.write(analysis)
+        
+        # 添加到聊天记录
+        st.session_state.chat_history.append({
+            "user": user_message,
+            "assistant": analysis
+        })
+        
+        # 显示当前回复
+        with st.chat_message("assistant"):
+            st.write(analysis)
+    
+    # 导出聊天记录
+    export_format = st.radio("选择导出格式", ["JSON", "Text"], key="export_format")
+    if st.button("导出聊天记录"):
+        if export_format == "JSON":
+            content = json.dumps(st.session_state.chat_history, ensure_ascii=False, indent=2)
+            file_name = "chat_history.json"
+            mime_type = "application/json"
+        else:
+            content = "\n".join([
+                f"用户: {chat['user']}\nAI回复: {chat['assistant']}"
+                for chat in st.session_state.chat_history
+            ])
+            file_name = "chat_history.txt"
+            mime_type = "text/plain"
+        
+        st.download_button(
+            label="下载聊天记录",
+            data=content.encode("utf-8"),
+            file_name=file_name,
+            mime=mime_type
+        )
 
 # 使用说明函数
 def show_instructions():
