@@ -8,9 +8,10 @@
 - 数据概览：快速查看数据结构和基本统计信息
 - 数据清洗：处理缺失值、删除重复行、交互式数据编辑
 - 描述性统计：生成数据的统计摘要
-- 数据可视化：支持多种图表类型（散点图、线图、柱状图、箱线图、直方图、饼图、热力图）
+- 数据可视化：支持多种图表类型（散点图、线图、柱状图、箱线图、直方图、饼图、热力图）并支持图表数据导出
 - 高级分析：相关性分析、数据分组和聚合
 - 数据导出：支持导出为 CSV 或 Excel 格式
+- AI数据分析：通过通义千问2.5大模型进行智能数据处理和问题解答
 
 ## 安装说明
 
@@ -44,22 +45,13 @@
    - 数据分析：查看描述性统计和相关性分析
    - 可视化：创建各种图表
    - 高级分析：进行更深入的数据探索
-
-## 贡献指南
-
-我们欢迎并感谢任何形式的贡献。如果您想为这个项目做出贡献，请遵循以下步骤：
-
-1. Fork 这个仓库
-2. 创建您的特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交您的更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 将您的更改推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启一个 Pull Request
+   - AI数据分析：上传文件并利用大语言模型进行智能分析和问题解答
 
 ## 联系方式
 
 如果您有任何问题或建议，请通过以下方式联系我们：
 
-- 项目链接：[https://github.com/lixinchen-031016/data-visualization-tool_for_smart_farm](https://github.com/yourusername/data-analysis-tool)
+- 项目链接：[https://github.com/lixinchen-031016/data-visualization-tool_for_smart_farm](https://github.com/lixinchen-031016/data-visualization-tool_for_smart_farm)
 
 ## 致谢
 
