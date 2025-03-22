@@ -330,43 +330,56 @@ def advanced_analysis():
 
 def ai_data_analysis():
     st.title("AI数据处理")
-    uploaded_file = st.file_uploader("选择文件", type=["csv", "xlsx", "xls", "json"])
-
-    if uploaded_file is not None:
-        data = read_file(uploaded_file)
-        if data is not None:
+    
+    # 添加选项以选择数据来源
+    data_source = st.radio("选择数据来源", ["使用数据概览上传的数据", "在此功能上传新数据"])
+    
+    if data_source == "使用数据概览上传的数据":
+        if 'data' not in st.session_state:
+            st.warning("请先在数据概览页面上传数据")
+            return
+        data = st.session_state['data']
+        st.success("已加载数据概览页面上传的数据")
+    else:
+        uploaded_file = st.file_uploader("选择文件", type=["csv", "xlsx", "xls", "json"])
+        if uploaded_file is not None:
+            data = read_file(uploaded_file)
+            if data is None:
+                return
             st.success("文件读取成功")
-            st.session_state['data'] = data
+        else:
+            st.warning("请上传文件以继续")
+            return
 
-            # 使用 st.text_area 组件用于输入用户消息
-            user_message = st.text_area("请输入上传数据相关的问题或指示：", key="user_message")
+    # 使用 st.text_area 组件用于输入用户消息
+    user_message = st.text_area("请输入上传数据相关的问题或指示：", key="user_message")
 
-            # 调用Qwen2.5 API进行数据分析和预测
-            if st.button("开始分析"):
-                # 将数据转换为JSON格式
-                data_json = data.to_json(orient='records')
+    # 调用Qwen2.5 API进行数据分析和预测
+    if st.button("开始分析"):
+        # 将数据转换为JSON格式
+        data_json = data.to_json(orient='records')
 
-                # 构建 messages 参数
-                messages = [
-                    {'role': 'system', 'content': 'You are a helpful assistant.'},
-                    {'role': 'user', 'content': f'{user_message}\n数据如下：\n{data_json}'},
-                ]
+        # 构建 messages 参数
+        messages = [
+            {'role': 'system', 'content': 'You are a helpful assistant.'},
+            {'role': 'user', 'content': f'{user_message}\n数据如下：\n{data_json}'},
+        ]
 
-                # 调用API
-                completion = client.chat.completions.create(
-                    model="qwen2.5-7b-instruct-1m",
-                    messages=messages,
-                )
+        # 调用API
+        completion = client.chat.completions.create(
+            model="qwen2.5-7b-instruct-1m",
+            messages=messages,
+        )
 
-                # 解析API响应
-                response = completion.model_dump_json()
-                response_data = json.loads(response)
+        # 解析API响应
+        response = completion.model_dump_json()
+        response_data = json.loads(response)
 
-                analysis = response_data.get('choices', [{}])[0].get('message', {}).get('content', '')
+        analysis = response_data.get('choices', [{}])[0].get('message', {}).get('content', '')
 
-                # 显示分析结果
-                st.subheader("数据分析预测结果")
-                st.write(analysis)
+        # 显示分析结果
+        st.subheader("数据分析预测结果")
+        st.write(analysis)
 
 # 使用说明函数
 def show_instructions():
