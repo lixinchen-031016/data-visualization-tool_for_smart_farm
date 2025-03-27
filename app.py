@@ -148,6 +148,16 @@ def data_cleaning():
         elif method == "填充众数":
             data[column].fillna(data[column].mode()[0], inplace=True)
     
+    # 新增：删除不需要的数据列功能
+    st.subheader("删除不需要的数据列")
+    columns_to_drop = st.multiselect("选择需要删除的列", data.columns)
+    if st.button("删除选中的列"):
+        if columns_to_drop:
+            data = data.drop(columns=columns_to_drop)
+            st.success(f"成功删除列: {', '.join(columns_to_drop)}")
+        else:
+            st.warning("未选择任何列进行删除")
+    
     st.session_state['data'] = data
     st.success("数据清洗完成")
     
@@ -157,6 +167,27 @@ def data_cleaning():
     if st.button("保存编辑"):
         st.session_state['data'] = edited_df
         st.success("数据编辑已保存")
+    
+    # 添加数据导出功能
+    st.subheader("导出清洗后的数据")
+    export_format = st.selectbox("选择导出格式", ["CSV", "Excel", "JSON"], key="export_format_clean")
+    if st.button("导出清洗后的数据", key="export_button_clean"):
+        if export_format == "CSV":
+            csv = data.to_csv(index=False)
+            b64 = base64.b64encode(csv.encode()).decode()
+            href = f'<a href="data:file/csv;base64,{b64}" download="cleaned_data.csv">下载清洗后的CSV文件</a>'
+        elif export_format == "Excel":
+            towrite = BytesIO()
+            data.to_excel(towrite, index=False, engine="openpyxl")
+            towrite.seek(0)
+            b64 = base64.b64encode(towrite.read()).decode()
+            href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="cleaned_data.xlsx">下载清洗后的Excel文件</a>'
+        else:  # JSON
+            json_data = data.to_json(orient='records', force_ascii=False).encode()
+            b64 = base64.b64encode(json_data).decode()
+            href = f'<a href="data:application/json;base64,{b64}" download="cleaned_data.json">下载清洗后的JSON文件</a>'
+        st.markdown(href, unsafe_allow_html=True)
+        st.success(f"数据已准备好下载，格式：{export_format}")
 
 # 数据分析函数
 def data_analysis():
