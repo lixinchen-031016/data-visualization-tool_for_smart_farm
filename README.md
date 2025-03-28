@@ -17,7 +17,7 @@
 
 1. 克隆此仓库：
    ```bash
-   git clone https://github.com/lixinchen-031016/data-visualization-tool_for_smart_farm.git
+   git clone -b new_tech --single-branch https://github.com/lixinchen-031016/data-visualization-tool_for_smart_farm.git
    ```
 
 2. 进入项目目录：
