@@ -27,7 +27,7 @@
 
 3. 安装依赖：
    ```bash
-   pip install -r requirements.txt
+   pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
    ```
 
 ## 使用方法
