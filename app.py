@@ -1,6 +1,7 @@
 import base64
 import json
 from io import BytesIO
+from multiprocessing import Pool
 
 from openai import OpenAI
 import pandas as pd
@@ -14,24 +15,44 @@ from plotly.colors import n_colors
 from streamlit_extras.metric_cards import style_metric_cards
 from streamlit_option_menu import option_menu
 
+# 在文件开头新增环境变量加载
+import os
+from dotenv import load_dotenv
+load_dotenv()  # 新增：加载.env文件
+
 # 设置页面配置
 st.set_page_config(layout="wide", page_title="数据分析工具", page_icon="📊")
 
 
+# 修改后的OpenAI客户端配置
 client = OpenAI(
-    api_key="sk-6e4e147032d54b8e8951f712b1e0b305",
-    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+    api_key=os.getenv("DASHSCOPE_API_KEY"),  # 替换硬编码
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
 )
 
-# 读取文件函数
+# 新增顶层函数解决进程间调用问题
+def process_chunk(chunk):
+    chunk = chunk.applymap(lambda x: x.replace('"', '""') if isinstance(x, str) else x)
+    for col in chunk.columns:
+        if chunk[col].dtype == 'object':
+            try:
+                chunk[col] = pd.to_datetime(chunk[col])
+            except:
+                pass
+    return chunk
+
 def read_file(file):
     try:
         file_extension = file.name.split('.')[-1].lower()
         if file_extension == 'csv':
-            # 读取CSV文件并进行初步清理
-            data = pd.read_csv(file)
-            # 转义特殊字符
-            data = data.applymap(lambda x: x.replace('"', '""') if isinstance(x, str) else x)
+            chunk_size = 10000  # 分块大小
+            
+            # 并行处理分块（使用顶层函数）
+            with Pool() as pool:
+                processed_chunks = pool.map(process_chunk, pd.read_csv(file, chunksize=chunk_size))
+            
+            # 合并分块数据
+            data = pd.concat(processed_chunks, ignore_index=True)
         elif file_extension in ['xlsx', 'xls']:
             data = pd.read_excel(file)
         elif file_extension == 'json':
@@ -39,14 +60,6 @@ def read_file(file):
         else:
             st.error(f"不支持的文件格式：{file_extension}")
             return None
-        
-        # 自动检测并转换日期时间列
-        for col in data.columns:
-            if data[col].dtype == 'object':
-                try:
-                    data[col] = pd.to_datetime(data[col])
-                except:
-                    pass
         
         return data
     except Exception as e:
