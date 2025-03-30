@@ -56,3 +56,5 @@ openai
 
 dotenv
 python-dotenv
+matplotlib
+psutil

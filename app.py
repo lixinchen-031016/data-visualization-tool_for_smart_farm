@@ -2,7 +2,10 @@ import base64
 import json
 from io import BytesIO
 from multiprocessing import Pool
+import utils.data_processing
+import utils.visualization
 
+from matplotlib import pyplot as plt
 from openai import OpenAI
 import pandas as pd
 import plotly
@@ -12,6 +15,9 @@ import plotly.graph_objects as go
 import plotly.io as pio
 import streamlit as st
 from plotly.colors import n_colors
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+from sklearn.metrics import ConfusionMatrixDisplay, mean_squared_error, accuracy_score
+from sklearn.svm import SVR
 from streamlit_extras.metric_cards import style_metric_cards
 from streamlit_option_menu import option_menu
 
@@ -70,16 +76,46 @@ def read_file(file):
 def main():
     # 侧边栏导航
     with st.sidebar:
-        selected = option_menu(
-            menu_title="主菜单",
-            options=["数据概览", "数据清洗", "数据分析", "可视化", "高级分析", "AI数据分析", "机器学习", "使用说明"],
-            icons=["table", "tools", "bar-chart", "graph-up", "gear-fill", "tools", "robot", "question-circle"],
-            menu_icon="cast",
-            default_index=0,
-        )
+        # 新增：状态指示器
+        if 'data' in st.session_state:
+            st.success(" 已加载数据集")
+        else:
+            st.warning("️ 未检测到数据")
+
+        # 新增：快捷操作面板
+        with st.expander(" 快捷操作", expanded=True):
+            if st.button(" 重置会话"):
+                st.session_state.clear()
+                st.rerun()  # 刷新页面以反映状态变化
+
+
+        menu_level1 = option_menu(None, ["数据管理", "分析建模", "系统设置"], 
+                                 icons=["database", "bar-chart-line", "gear"],
+                                 menu_icon="cast",
+                                 default_index=0)
+        
+        if menu_level1 == "数据管理":
+            selected = option_menu(None, ["数据概览", "数据清洗"], 
+                                 icons=["table", "brush"],
+                                 menu_icon="cast",
+                                 default_index=0)
+        elif menu_level1 == "分析建模":
+            selected = option_menu(None, ["数据分析", "可视化", "高级分析", "AI数据分析", "机器学习"], 
+                                 icons=["bar-chart", "graph-up", "gear-fill", "tools", "robot"],
+                                 menu_icon="cast",
+                                 default_index=0)
+        elif menu_level1 == "系统设置":
+            selected = option_menu(None, ["性能监控", "使用说明"], 
+                                 icons=["speedometer", "question-circle"],
+                                 menu_icon="cast",
+                                 default_index=0)
+        else:
+            selected = None
     
     # 主内容区
-    if selected == "机器学习":
+    if selected == "性能监控":
+        show_performance()
+    elif selected == "机器学习":
         machine_learning()
     elif selected == "数据概览":
         data_overview()
@@ -127,16 +163,7 @@ def data_overview():
             st.subheader("数据导出")
             export_format = st.radio("选择导出格式", ["CSV", "Excel"])
             if st.button("导出数据"):
-                if export_format == "CSV":
-                    csv = data.to_csv(index=False)
-                    b64 = base64.b64encode(csv.encode()).decode()
-                    href = f'<a href="data:file/csv;base64,{b64}" download="exported_data.csv">下载 CSV 文件</a>'
-                else:
-                    towrite = BytesIO()
-                    data.to_excel(towrite, index=False, engine="openpyxl")
-                    towrite.seek(0)
-                    b64 = base64.b64encode(towrite.read()).decode()
-                    href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="exported_data.xlsx">下载 Excel 文件</a>'
+                href = utils.data_processing.export_data(data, export_format)  # 调用公共函数
                 st.markdown(href, unsafe_allow_html=True)
 
 # 数据清洗函数
@@ -147,6 +174,10 @@ def data_cleaning():
         return
     
     data = st.session_state['data']
+    
+    # 新增：实时数据预览
+    with st.expander("实时数据预览"):
+        st.dataframe(data.head(3).style.highlight_null(color='yellow'))
     
     st.subheader("删除重复行")
     if st.button("删除重复行"):
@@ -191,20 +222,7 @@ def data_cleaning():
     st.subheader("导出清洗后的数据")
     export_format = st.selectbox("选择导出格式", ["CSV", "Excel", "JSON"], key="export_format_clean")
     if st.button("导出清洗后的数据", key="export_button_clean"):
-        if export_format == "CSV":
-            csv = data.to_csv(index=False)
-            b64 = base64.b64encode(csv.encode()).decode()
-            href = f'<a href="data:file/csv;base64,{b64}" download="cleaned_data.csv">下载清洗后的CSV文件</a>'
-        elif export_format == "Excel":
-            towrite = BytesIO()
-            data.to_excel(towrite, index=False, engine="openpyxl")
-            towrite.seek(0)
-            b64 = base64.b64encode(towrite.read()).decode()
-            href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="cleaned_data.xlsx">下载清洗后的Excel文件</a>'
-        else:  # JSON
-            json_data = data.to_json(orient='records', force_ascii=False).encode()
-            b64 = base64.b64encode(json_data).decode()
-            href = f'<a href="data:application/json;base64,{b64}" download="cleaned_data.json">下载清洗后的JSON文件</a>'
+        href = utils.data_processing.export_data(data, export_format)  # 调用公共函数
         st.markdown(href, unsafe_allow_html=True)
         st.success(f"数据已准备好下载，格式：{export_format}")
 
@@ -251,9 +269,6 @@ def data_visualization():
         st.warning("数据集中没有数值列，无法进行可视化。")
         return
     
-    # 定义现代科技感的颜色方案
-    color_scheme = n_colors('rgb(0, 122, 255)', 'rgb(10, 132, 255)', 6, colortype='rgb')
-
     x_column = None
     y_column = None
     column = None
@@ -263,23 +278,20 @@ def data_visualization():
         y_column = st.selectbox("选择Y轴", numeric_columns)
         color_column = st.selectbox("选择颜色列（可选）", ["无"] + list(categorical_columns))
         
-        if chart_type == "散点图":
-            fig = px.scatter(data, x=x_column, y=y_column, color=color_column if color_column != "无" else None,
-                             color_discrete_sequence=color_scheme)
-        elif chart_type == "线图":
-            fig = px.line(data, x=x_column, y=y_column, color=color_column if color_column != "无" else None,
-                          color_discrete_sequence=color_scheme)
-        else:  # 柱状图
-            fig = px.bar(data, x=x_column, y=y_column, color=color_column if color_column != "无" else None,
-                         color_discrete_sequence=color_scheme)
+        params = {
+            "x": x_column,
+            "y": y_column,
+            "color": color_column if color_column != "无" else None,
+            "color_discrete_sequence": n_colors('rgb(0, 122, 255)', 'rgb(10, 132, 255)', 6, colortype='rgb')
+        }
+        fig = utils.visualization.create_chart(data, chart_type, **params)  # 修改：正确引用create_chart函数
     
     elif chart_type in ["箱线图", "直方图"]:
         column = st.selectbox("选择列", numeric_columns)
         if chart_type == "箱线图":
-            fig = px.box(data, y=column, color_discrete_sequence=color_scheme)
+            fig = utils.visualization.create_chart(data, chart_type, y=column)  # 修改：正确引用create_chart函数
         else:  # 直方图
-            fig = px.histogram(data, x=column, nbins=30, marginal="box", 
-                               color_discrete_sequence=color_scheme)
+            fig = utils.visualization.create_chart(data, chart_type, x=column, nbins=30, marginal="box")  # 修改：正确引用create_chart函数
             fig.update_traces(opacity=0.75)
             fig.update_layout(bargap=0.1)
     
@@ -289,21 +301,14 @@ def data_visualization():
             return
         column = st.selectbox("选择列", categorical_columns)
         value_counts = data[column].value_counts()
-        fig = px.pie(values=value_counts.values, names=value_counts.index, title=f'{column} 的分布',
-                     color_discrete_sequence=color_scheme)
+        fig = utils.visualization.create_chart(value_counts, chart_type, values=value_counts.values, names=value_counts.index)  # 修改：正确引用create_chart函数
     
     elif chart_type == "热力图":
         if len(numeric_columns) < 2:
             st.warning("数据集中数值列不足两列，无法创建热力图。")
             return
         corr_matrix = data[numeric_columns].corr()
-        fig = px.imshow(corr_matrix, 
-                        text_auto=True, 
-                        aspect="auto", 
-                        color_continuous_scale='RdBu_r',  # 使用红蓝色阶
-                        zmin=-1, 
-                        zmax=1,
-                        labels=dict(color="相关系数"))
+        fig = utils.visualization.create_chart(corr_matrix, chart_type, text_auto=True, aspect="auto", color_continuous_scale='RdBu_r', zmin=-1, zmax=1)  # 修改：正确引用create_chart函数
         fig.update_traces(text=corr_matrix.round(2), texttemplate="%{text}")
         fig.update_layout(coloraxis_colorbar=dict(
             title="相关系数",
@@ -494,6 +499,23 @@ def show_instructions():
     如需更多帮助，请参阅 [GitHub 仓库](https://github.com/lixinchen-031016/data-visualization-tool_for_smart_farm)。
     """)
 
+
+# 新增模型选项
+model_options = {
+    "分类": {
+        "随机森林": RandomForestClassifier,
+    },
+    "回归": {
+        "随机森林": RandomForestRegressor,
+        "支持向量机": SVR
+    }
+}
+
+def plot_confusion_matrix(y_true, y_pred):
+    fig, ax = plt.subplots()
+    ConfusionMatrixDisplay.from_predictions(y_true, y_pred, ax=ax)
+    st.pyplot(fig)
+
 # 新增机器学习函数
 def machine_learning():
     st.title("机器学习")
@@ -519,6 +541,10 @@ def machine_learning():
     
     st.info(f"检测到任务类型：{task_type}")
     
+    # 新增模型选择
+    model_name = st.selectbox("选择模型", list(model_options[task_type].keys()))
+    ModelClass = model_options[task_type][model_name]
+    
     # 数据分割
     from sklearn.model_selection import train_test_split
     X = data[feature_columns]
@@ -527,32 +553,37 @@ def machine_learning():
     
     # 训练模型功能
     if st.button("训练模型"):
-        from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-        from sklearn.metrics import accuracy_score, mean_squared_error
-        
         if task_type == "分类":
-            model = RandomForestClassifier(random_state=42)
-            model.fit(X_train, y_train)
+            model = ModelClass(random_state=42)
+            with st.spinner("正在训练模型，请稍候..."):  # 新增：模型训练进度条
+                model.fit(X_train, y_train)
+            st.toast("训练完成！", icon="✅")  # 新增：训练完成提示
             y_pred = model.predict(X_test)
             score = accuracy_score(y_test, y_pred)
             metric_name = "准确率"
+            plot_confusion_matrix(y_test, y_pred)
         else:  # 回归
-            model = RandomForestRegressor(random_state=42)
-            model.fit(X_train, y_train)
+            model = ModelClass()
+            with st.spinner("正在训练模型，请稍候..."):  # 新增：模型训练进度条
+                model.fit(X_train, y_train)
+            st.toast("训练完成！", icon="✅")  # 新增：训练完成提示
             y_pred = model.predict(X_test)
-            score = np.sqrt(mean_squared_error(y_test, y_pred))  # 修改：手动计算 RMSE
+            score = np.sqrt(mean_squared_error(y_test, y_pred))
             metric_name = "均方根误差 (RMSE)"
         
         st.success(f"模型训练完成！测试集 {metric_name}: {score:.2f}")
         
-        # 显示特征重要性
-        feature_importances = pd.DataFrame({
-            "Feature": feature_columns,
-            "Importance": model.feature_importances_
-        }).sort_values(by="Importance", ascending=False)
-        st.subheader("特征重要性")
-        st.dataframe(feature_importances)
-        
+        # 修改：仅在模型支持 feature_importances_ 时显示特征重要性
+        if hasattr(model, 'feature_importances_'):
+            feature_importances = pd.DataFrame({
+                "Feature": feature_columns,
+                "Importance": model.feature_importances_
+            }).sort_values(by="Importance", ascending=False)
+            st.subheader("特征重要性")
+            st.dataframe(feature_importances)
+        else:
+            st.info("当前模型不支持特征重要性分析")
+
         # 保存模型到 session_state
         st.session_state['trained_model'] = model
         st.session_state['feature_columns'] = feature_columns
@@ -587,6 +618,20 @@ def machine_learning():
                 st.error(f"预测失败：{str(e)}")
     else:
         st.info("请先训练模型以启用预测功能")
+
+# 新增性能监控函数
+import psutil
+import time
+
+def show_performance():
+    st.subheader("系统监控")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("内存使用", f"{psutil.virtual_memory().percent}%")
+    with col2:
+        st.metric("CPU负载", f"{psutil.cpu_percent()}%")
+    with col3:
+        st.metric("处理时间", f"{time.process_time():.2f}s")
 
 if __name__ == '__main__':
     main()
