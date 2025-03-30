@@ -1,5 +1,5 @@
 import plotly.express as px
-import plotly.graph_objects as go
+
 
 def create_chart(data, chart_type, **params):
     """统一图表生成逻辑"""

@@ -1,19 +1,19 @@
 import base64
 import json
-from io import BytesIO
+# 在文件开头新增环境变量加载
+import os
 from multiprocessing import Pool
-import utils.data_processing
-import utils.visualization
 
-from matplotlib import pyplot as plt
-from openai import OpenAI
+import numpy as np
 import pandas as pd
 import plotly
-import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import plotly.io as pio
 import streamlit as st
+from dotenv import load_dotenv
+from matplotlib import pyplot as plt
+from openai import OpenAI
 from plotly.colors import n_colors
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.metrics import ConfusionMatrixDisplay, mean_squared_error, accuracy_score
@@ -21,9 +21,9 @@ from sklearn.svm import SVR
 from streamlit_extras.metric_cards import style_metric_cards
 from streamlit_option_menu import option_menu
 
-# 在文件开头新增环境变量加载
-import os
-from dotenv import load_dotenv
+import utils.data_processing
+import utils.visualization
+
 load_dotenv()  # 新增：加载.env文件
 
 # 设置页面配置
