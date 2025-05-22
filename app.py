@@ -4,7 +4,6 @@ import json
 import os
 from multiprocessing import Pool
 
-import numpy as np
 import pandas as pd
 import plotly
 import plotly.express as px
@@ -12,17 +11,16 @@ import plotly.graph_objects as go
 import plotly.io as pio
 import streamlit as st
 from dotenv import load_dotenv
-from matplotlib import pyplot as plt
 from openai import OpenAI
 from plotly.colors import n_colors
-from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
-from sklearn.metrics import ConfusionMatrixDisplay, mean_squared_error, accuracy_score
-from sklearn.svm import SVR
 from streamlit_extras.metric_cards import style_metric_cards
 from streamlit_option_menu import option_menu
 
 import utils.data_processing
+import utils.machine_learning
 import utils.visualization
+import utils.performance
+import utils.instructions
 
 load_dotenv()  # 新增：加载.env文件
 
@@ -114,9 +112,10 @@ def main():
     
     # 主内容区
     if selected == "性能监控":
-        show_performance()
+        utils.performance.render_ui()
     elif selected == "机器学习":
-        machine_learning()
+        utils.machine_learning.render_ui(st.session_state.get('data'))
+
     elif selected == "数据概览":
         data_overview()
     elif selected == "数据清洗":
@@ -130,7 +129,7 @@ def main():
     elif selected == "AI数据分析":
         ai_data_analysis()
     elif selected == "使用说明":
-        show_instructions()
+        utils.instructions.render_ui()
 
 # 数据概览函数
 def data_overview():
@@ -483,155 +482,6 @@ def ai_data_analysis():
             file_name=file_name,
             mime=mime_type
         )
-
-# 使用说明函数
-def show_instructions():
-    st.title("使用说明")
-    st.markdown("""
-    1. **数据导入**：在"数据概览"页面上传您的 CSV、Excel 或 JSON 文件。
-    2. **数据清洗**：使用"数据清洗"页面处理缺失值、删除重复行或列，并支持交互式数据编辑。
-    3. **数据分析**：在"数据分析"页面查看描述性统计和相关性分析。
-    4. **数据可视化**：使用"可视化"页面创建散点图、线图、柱状图等多种图表。
-    5. **高级分析**：在"高级分析"页面进行分组聚合等更深入的数据探索。
-    6. **AI数据分析**：在"AI数据分析"页面调用大语言模型，对上传的数据进行智能分析并回答问题。
-    7. **机器学习**：在"机器学习"页面选择目标变量和特征列，训练模型并进行预测。
-    
-    如需更多帮助，请参阅 [GitHub 仓库](https://github.com/lixinchen-031016/data-visualization-tool_for_smart_farm)。
-    """)
-
-
-# 新增模型选项
-model_options = {
-    "分类": {
-        "随机森林": RandomForestClassifier,
-    },
-    "回归": {
-        "随机森林": RandomForestRegressor,
-        "支持向量机": SVR
-    }
-}
-
-def plot_confusion_matrix(y_true, y_pred):
-    fig, ax = plt.subplots()
-    ConfusionMatrixDisplay.from_predictions(y_true, y_pred, ax=ax)
-    st.pyplot(fig)
-
-# 新增机器学习函数
-def machine_learning():
-    st.title("机器学习")
-    if 'data' not in st.session_state:
-        st.warning("请先在数据概览页面上传数据")
-        return
-    
-    data = st.session_state['data']
-    
-    st.subheader("选择目标变量和特征列")
-    target_column = st.selectbox("选择目标变量", data.columns)
-    feature_columns = st.multiselect("选择特征列", [col for col in data.columns if col != target_column])
-    
-    if not feature_columns:
-        st.warning("请选择至少一个特征列以继续")
-        return
-    
-    # 检查目标变量类型并确定任务类型
-    if pd.api.types.is_numeric_dtype(data[target_column]):
-        task_type = "回归"
-    else:
-        task_type = "分类"
-    
-    st.info(f"检测到任务类型：{task_type}")
-    
-    # 新增模型选择
-    model_name = st.selectbox("选择模型", list(model_options[task_type].keys()))
-    ModelClass = model_options[task_type][model_name]
-    
-    # 数据分割
-    from sklearn.model_selection import train_test_split
-    X = data[feature_columns]
-    y = data[target_column]
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    
-    # 训练模型功能
-    if st.button("训练模型"):
-        if task_type == "分类":
-            model = ModelClass(random_state=42)
-            with st.spinner("正在训练模型，请稍候..."):  # 新增：模型训练进度条
-                model.fit(X_train, y_train)
-            st.toast("训练完成！", icon="✅")  # 新增：训练完成提示
-            y_pred = model.predict(X_test)
-            score = accuracy_score(y_test, y_pred)
-            metric_name = "准确率"
-            plot_confusion_matrix(y_test, y_pred)
-        else:  # 回归
-            model = ModelClass()
-            with st.spinner("正在训练模型，请稍候..."):  # 新增：模型训练进度条
-                model.fit(X_train, y_train)
-            st.toast("训练完成！", icon="✅")  # 新增：训练完成提示
-            y_pred = model.predict(X_test)
-            score = np.sqrt(mean_squared_error(y_test, y_pred))
-            metric_name = "均方根误差 (RMSE)"
-        
-        st.success(f"模型训练完成！测试集 {metric_name}: {score:.2f}")
-        
-        # 修改：仅在模型支持 feature_importances_ 时显示特征重要性
-        if hasattr(model, 'feature_importances_'):
-            feature_importances = pd.DataFrame({
-                "Feature": feature_columns,
-                "Importance": model.feature_importances_
-            }).sort_values(by="Importance", ascending=False)
-            st.subheader("特征重要性")
-            st.dataframe(feature_importances)
-        else:
-            st.info("当前模型不支持特征重要性分析")
-
-        # 保存模型到 session_state
-        st.session_state['trained_model'] = model
-        st.session_state['feature_columns'] = feature_columns
-        
-        # 模型导出
-        import pickle
-        model_bytes = pickle.dumps(model)
-        b64 = base64.b64encode(model_bytes).decode()
-        href = f'<a href="data:application/octet-stream;base64,{b64}" download="model.pkl">下载训练好的模型 (.pkl)</a>'
-        st.markdown(href, unsafe_allow_html=True)
-    
-    # 使用模型进行预测功能
-    if 'trained_model' in st.session_state:
-        st.subheader("使用模型进行预测")
-        model = st.session_state['trained_model']
-        feature_columns = st.session_state['feature_columns']
-        
-        input_data = {}
-        for col in feature_columns:
-            input_data[col] = st.number_input(f"输入 {col}", value=data[col].mean())
-        
-        if st.button("预测"):
-            try:
-                input_df = pd.DataFrame([input_data])
-                prediction = model.predict(input_df)
-                # 修改：根据预测结果类型选择合适的格式代码
-                if isinstance(prediction[0], str):
-                    st.success(f"预测成功！预测结果为：{prediction[0]:s}")
-                else:
-                    st.success(f"预测成功！预测结果为：{prediction[0]:.2f}")
-            except Exception as e:
-                st.error(f"预测失败：{str(e)}")
-    else:
-        st.info("请先训练模型以启用预测功能")
-
-# 新增性能监控函数
-import psutil
-import time
-
-def show_performance():
-    st.subheader("系统监控")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("内存使用", f"{psutil.virtual_memory().percent}%")
-    with col2:
-        st.metric("CPU负载", f"{psutil.cpu_percent()}%")
-    with col3:
-        st.metric("处理时间", f"{time.process_time():.2f}s")
 
 if __name__ == '__main__':
     main()
