@@ -280,6 +280,51 @@ def data_overview():
             if st.button("导出数据"):
                 href = utils.data_processing.export_data(data, export_format)  # 调用公共函数
                 st.markdown(href, unsafe_allow_html=True)
+            
+            # 新增：一键导出报告功能
+            st.markdown("---")
+            st.subheader("生成完整报告")
+            report_type = st.radio("选择报告格式", ["HTML"])
+            
+            if st.button("生成并下载报告"):
+                # 收集所有分析结果
+                report_content = "<h1>数据分析报告</h1>"
+                
+                # 添加数据概览
+                report_content += "<h2>数据概览</h2>"
+                report_content += f"<p>行数: {data.shape[0]}, 列数: {data.shape[1]}, 缺失值: {data.isnull().sum().sum()}</p>"
+                
+                # 添加数据预览
+                report_content += "<h3>数据预览</h3>"
+                report_content += data.head().to_html()
+                
+                # 添加数据类型
+                report_content += "<h3>数据类型</h3>"
+                report_content += data.dtypes.to_frame().to_html()
+                
+                # 添加描述性统计
+                if len(data.select_dtypes(include=['float64', 'int64']).columns) >= 1:
+                    report_content += "<h2>描述性统计</h2>"
+                    report_content += data.describe().to_html()
+                
+                # 添加相关性分析
+                if len(data.select_dtypes(include=['float64', 'int64']).columns) >= 2:
+                    report_content += "<h2>相关性分析</h2>"
+                    corr_matrix = data[data.select_dtypes(include=['float64', 'int64']).columns].corr()
+                    report_content += corr_matrix.to_html()
+                    
+                    # 生成相关性热力图
+                    fig = px.imshow(corr_matrix, text_auto=True, aspect="auto", 
+                                   color_continuous_scale='RdBu_r', zmin=-1, zmax=1)
+                    fig.update_traces(text=corr_matrix.round(2), texttemplate="%{text}")
+                    report_content += fig.to_html(full_html=False)
+                
+                # 转换为选定格式
+                if report_type == "HTML":
+                    # 直接生成HTML下载链接
+                    b64 = base64.b64encode(report_content.encode()).decode()
+                    href = f'<a href="data:text/html;base64,{b64}" download="analysis_report.html">下载HTML报告</a>'
+                    st.markdown(href, unsafe_allow_html=True)
 
 # 数据清洗函数
 def data_cleaning():
