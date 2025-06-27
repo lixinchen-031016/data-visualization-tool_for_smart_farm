@@ -27,6 +27,122 @@ load_dotenv()  # 新增：加载.env文件
 # 设置页面配置
 st.set_page_config(layout="wide", page_title="数据分析工具", page_icon="📊")
 
+# 更新为亮色主题CSS样式
+st.markdown("""
+<style>
+/* 主界面美化 - 亮色主题 */
+.stApp {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%) !important;
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    color: #333 !important;  /* 深色文字 */
+}
+
+/* 侧边栏美化 */
+[data-testid="stSidebar"] {
+    background: rgba(255, 255, 255, 0.9) !important;  /* 白色半透明 */
+    border-right: 1px solid #e6ecf0 !important;  /* 浅灰边框 */
+    box-shadow: 2px 0 10px rgba(0,0,0,0.05) !important;
+}
+
+/* 标题美化 */
+h1, h2, h3 {
+    color: #1a237e !important;  /* 深蓝色标题 */
+    border-bottom: 2px solid #3f51b5 !important;  /* 蓝色下划线 */
+    padding-bottom: 0.3em;
+}
+
+/* 按钮美化 */
+.stButton>button {
+    background: #3f51b5 !important;  /* 蓝色按钮 */
+    color: white !important;
+    border-radius: 8px !important;
+    padding: 8px 20px !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 12px rgba(63,81,181,0.3) !important;  /* 浅蓝色阴影 */
+}
+
+.stButton>button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(63,81,181,0.4) !important;
+}
+
+/* 数据表格美化 */
+.stDataFrame {
+    border-radius: 10px !important;
+    background: white !important;  /* 白色背景 */
+    border: 1px solid #e6ecf0 !important;  /* 浅灰边框 */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+    color: #333 !important;  /* 深色文字 */
+}
+
+/* 指标卡片美化 */
+.metric-card {
+    background: white !important;  /* 白色背景 */
+    border-radius: 10px !important;
+    padding: 20px !important;
+    border: 1px solid #e6ecf0 !important;  /* 浅灰边框 */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+    color: #333 !important;  /* 深色文字 */
+}
+
+/* 图表容器美化 */
+.plotly-graph-div {
+    border-radius: 12px !important;
+    background: white !important;  /* 白色背景 */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+    padding: 15px;
+    border: 1px solid #e6ecf0 !important;  /* 浅灰边框 */
+}
+
+/* 输入组件美化 */
+.stSelectbox, .stMultiselect, .stTextInput, .stSlider, .stRadio {
+    background: white !important;  /* 白色背景 */
+    border-radius: 8px !important;
+    border: 1px solid #e6ecf0 !important;  /* 浅灰边框 */
+    color: #333 !important;  /* 深色文字 */
+}
+
+/* 进度条美化 */
+.stProgress > div > div > div {
+    background: #3f51b5 !important;  /* 蓝色进度条 */
+}
+
+/* 系统监控卡片 */
+.system-monitor-card {
+    background: white !important;  /* 白色背景 */
+    border-radius: 10px !important;
+    padding: 15px !important;
+    border: 1px solid #e6ecf0 !important;  /* 浅灰边框 */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+    color: #333 !important;  /* 深色文字 */
+}
+
+.system-monitor-card h3 {
+    color: #1a237e !important;  /* 深蓝色标题 */
+}
+
+.system-monitor-card .value {
+    color: #3f51b5 !important;  /* 蓝色数值 */
+}
+
+/* 标签和文本颜色调整 */
+label, .stMarkdown p, .stMarkdown li {
+    color: #333 !important;  /* 深色文字 */
+}
+
+/* 选项菜单美化 */
+[data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"] {
+    background: rgba(255, 255, 255, 0.9) !important;  /* 白色背景 */
+    border: 1px solid #e6ecf0 !important;  /* 浅灰边框 */
+}
+
+/* 文件上传器美化 */
+[data-testid="stFileUploader"] {
+    background: white !important;  /* 白色背景 */
+    border: 1px solid #e6ecf0 !important;  /* 浅灰边框 */
+}
+</style>
+""", unsafe_allow_html=True)
 
 # 修改后的OpenAI客户端配置
 client = OpenAI(
